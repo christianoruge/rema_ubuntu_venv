@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  rema-pdf-excel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rema-pdf-excel-app
+    ports:
+      - "8000:8000"
+    environment:
+      - CONTAINER_ENV=true
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./pdf_input:/tmp/pdf_input
+      - ./output:/tmp/output
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s

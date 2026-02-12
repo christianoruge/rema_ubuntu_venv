@@ -1,0 +1,13 @@
+Flask==3.1.2
+pandas==3.0.0
+openpyxl==3.1.5
+PyPDF==6.7.0
+python-dateutil==2.9.0.post0
+numpy==2.4.2
+click==8.3.1
+Werkzeug==3.1.5
+Jinja2==3.1.6
+itsdangerous==2.2.0
+MarkupSafe==3.0.3
+blinker==1.9.0
+et-xmlfile==2.0.0
