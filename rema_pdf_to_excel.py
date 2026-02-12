@@ -347,6 +347,179 @@ if IS_CONTAINER:
         time.sleep(1)
         os._exit(0)
     
+    @app.route('/', methods=['GET'])
+    def index():
+        """Serve the file upload form."""
+        html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>PDF to Excel Converter</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                }
+                .container {
+                    background: white;
+                    padding: 40px;
+                    border-radius: 10px;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+                    text-align: center;
+                    max-width: 400px;
+                }
+                h1 {
+                    color: #333;
+                    margin-bottom: 30px;
+                }
+                .file-input-wrapper {
+                    position: relative;
+                    overflow: hidden;
+                    display: inline-block;
+                }
+                .file-input-wrapper input[type=file] {
+                    position: absolute;
+                    left: -9999px;
+                }
+                .file-input-label {
+                    display: inline-block;
+                    padding: 12px 30px;
+                    background-color: #667eea;
+                    color: white;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    margin-bottom: 20px;
+                    transition: background-color 0.3s;
+                }
+                .file-input-label:hover {
+                    background-color: #764ba2;
+                }
+                #fileName {
+                    margin-bottom: 20px;
+                    color: #666;
+                    font-size: 14px;
+                }
+                button {
+                    padding: 12px 30px;
+                    background-color: #28a745;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    transition: background-color 0.3s;
+                }
+                button:hover {
+                    background-color: #218838;
+                }
+                button:disabled {
+                    background-color: #ccc;
+                    cursor: not-allowed;
+                }
+                #message {
+                    margin-top: 20px;
+                    font-size: 14px;
+                    min-height: 20px;
+                }
+                .success {
+                    color: #28a745;
+                }
+                .error {
+                    color: #dc3545;
+                }
+                .loading {
+                    color: #667eea;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>📄 PDF to Excel Converter</h1>
+                <form id="uploadForm">
+                    <div class="file-input-wrapper">
+                        <label for="pdfFile" class="file-input-label">Choose PDF File</label>
+                        <input type="file" id="pdfFile" name="file" accept=".pdf" required>
+                    </div>
+                    <div id="fileName"></div>
+                    <button type="submit" id="submitBtn" disabled>Convert to Excel</button>
+                </form>
+                <div id="message"></div>
+            </div>
+
+            <script>
+                const pdfFile = document.getElementById('pdfFile');
+                const fileName = document.getElementById('fileName');
+                const submitBtn = document.getElementById('submitBtn');
+                const message = document.getElementById('message');
+                const form = document.getElementById('uploadForm');
+
+                pdfFile.addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        fileName.textContent = '✓ Selected: ' + this.files[0].name;
+                        submitBtn.disabled = false;
+                    } else {
+                        fileName.textContent = '';
+                        submitBtn.disabled = true;
+                    }
+                });
+
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    if (pdfFile.files.length === 0) {
+                        message.textContent = 'Please select a PDF file';
+                        message.className = 'error';
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('file', pdfFile.files[0]);
+
+                    submitBtn.disabled = true;
+                    message.textContent = 'Converting... This may take a moment.';
+                    message.className = 'loading';
+
+                    try {
+                        const response = await fetch('/convert', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'converted.xlsx';
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            a.remove();
+                            message.textContent = '✓ Download complete! The container will shut down now.';
+                            message.className = 'success';
+                        } else {
+                            const error = await response.json();
+                            message.textContent = 'Error: ' + (error.error || 'Conversion failed');
+                            message.className = 'error';
+                            submitBtn.disabled = false;
+                        }
+                    } catch (error) {
+                        message.textContent = 'Error: ' + error.message;
+                        message.className = 'error';
+                        submitBtn.disabled = false;
+                    }
+                });
+            </script>
+        </body>
+        </html>
+        """
+        return html
+    
     @app.route('/health', methods=['GET'])
     def health():
         """Health check endpoint."""
