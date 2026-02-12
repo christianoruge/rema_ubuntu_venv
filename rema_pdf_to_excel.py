@@ -9,6 +9,8 @@ from typing import List, Dict, Tuple, Optional, Iterable, Set
 from pathlib import Path
 from pypdf import PdfReader
 import sys
+import threading
+import time
 
 # Detect environment
 IS_CONTAINER = os.getenv('CONTAINER_ENV', 'false').lower() == 'true'
@@ -338,6 +340,13 @@ def process_file(pdf_name: str) -> Path:
 
 # ========== FLASK API FOR CONTAINER APP ==========
 if IS_CONTAINER:
+    def shutdown_container():
+        """Shutdown the Flask server to stop incurring Azure costs."""
+        print("[INFO] Excel file downloaded successfully. Shutting down container...")
+        # Give the response time to send before exiting
+        time.sleep(1)
+        os._exit(0)
+    
     @app.route('/health', methods=['GET'])
     def health():
         """Health check endpoint."""
@@ -377,6 +386,10 @@ if IS_CONTAINER:
             XLSX_DIR = output_dir
             
             excel_path = process_file(str(pdf_path))
+            
+            # Schedule container shutdown after response is sent
+            shutdown_thread = threading.Thread(target=shutdown_container, daemon=True)
+            shutdown_thread.start()
             
             # Return the Excel file
             return send_file(
