@@ -344,6 +344,8 @@ def process_file(pdf_name: str) -> Path:
 
 # ========== FLASK API FOR CONTAINER APP ==========
 if IS_CONTAINER:
+    print("[STARTUP] Initializing Flask routes for container...")
+    
     def shutdown_container():
         """Shutdown the Flask server to stop incurring Azure costs."""
         print("[INFO] Excel file downloaded successfully. Shutting down container...")
@@ -354,6 +356,7 @@ if IS_CONTAINER:
     @app.route('/', methods=['GET'])
     def index():
         """Serve the file upload form."""
+        print("[DEBUG] GET / - Serving upload form")
         html = """
         <!DOCTYPE html>
         <html>
@@ -527,6 +530,7 @@ if IS_CONTAINER:
     @app.route('/health', methods=['GET'])
     def health():
         """Health check endpoint."""
+        print("[DEBUG] GET /health - Health check")
         return jsonify({"status": "healthy"}), 200
 
     @app.route('/convert', methods=['POST'])
@@ -536,6 +540,7 @@ if IS_CONTAINER:
         Expects a multipart form with 'file' field containing the PDF.
         Returns the Excel file or an error message.
         """
+        print("[DEBUG] POST /convert - Processing PDF upload")
         try:
             if 'file' not in request.files:
                 return jsonify({"error": "No file provided"}), 400
@@ -587,6 +592,9 @@ if IS_CONTAINER:
             except:
                 pass
 
+    print("[STARTUP] Flask routes initialized successfully!")
+    print(f"[STARTUP] Registered routes: {[rule.rule for rule in app.url_map.iter_rules()]}")
+
 
 # ========== LOCAL EXECUTION (VS CODE) ==========
 if not IS_CONTAINER:
@@ -630,17 +638,37 @@ if not IS_CONTAINER:
 
 else:
     # ========== START FLASK SERVER FOR CONTAINER ==========
+    if app is None:
+        print("[CRITICAL ERROR] Flask app is None! Cannot start server.")
+        sys.exit(1)
+    
     port = int(os.getenv('PORT', 8000))
-    print(f"[INFO] Starting Flask server on 0.0.0.0:{port}")
-    print(f"[INFO] Container environment: {IS_CONTAINER}")
+    print(f"\n{'='*60}")
+    print(f"[INFO] FLASK SERVER STARTING IN CONTAINER MODE")
+    print(f"[INFO] HOST: 0.0.0.0")
+    print(f"[INFO] PORT: {port}")
+    print(f"[INFO] IS_CONTAINER: {IS_CONTAINER}")
     print(f"[INFO] Routes registered: {[rule.rule for rule in app.url_map.iter_rules()]}")
+    print(f"{'='*60}\n")
+    
+    import sys
+    sys.stdout.flush()
+    sys.stderr.flush()
+    
     try:
-        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+        print("[INFO] Starting Flask app.run()...")
+        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False, threaded=True)
+    except KeyboardInterrupt:
+        print("[INFO] Flask server interrupted by user")
+        sys.exit(0)
     except Exception as e:
-        print(f"[ERROR] Flask server failed to start: {e}")
+        print(f"\n[CRITICAL ERROR] Flask server failed to start!")
+        print(f"[ERROR] {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
+        sys.stdout.flush()
+        sys.stderr.flush()
         sys.exit(1)
 
-print("Updated TABLE_COLUMNS list:", TABLE_COLUMNS)
+print("Script completed (not expecting to reach here if Flask server is running)")
 
