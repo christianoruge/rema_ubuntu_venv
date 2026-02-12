@@ -15,6 +15,8 @@ import time
 # Detect environment
 IS_CONTAINER = os.getenv('CONTAINER_ENV', 'false').lower() == 'true'
 
+print(f"[STARTUP] Environment detection: CONTAINER_ENV={os.getenv('CONTAINER_ENV')} -> IS_CONTAINER={IS_CONTAINER}")
+
 # Import tkinter only if NOT running as container app
 if not IS_CONTAINER:
     import tkinter as tk
@@ -24,6 +26,8 @@ if not IS_CONTAINER:
 if IS_CONTAINER:
     from flask import Flask, request, jsonify, send_file
     app = Flask(__name__)
+else:
+    app = None  # Flask app is not needed in local mode
 
 
 def select_pdf_file():
@@ -627,7 +631,16 @@ if not IS_CONTAINER:
 else:
     # ========== START FLASK SERVER FOR CONTAINER ==========
     port = int(os.getenv('PORT', 8000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    print(f"[INFO] Starting Flask server on 0.0.0.0:{port}")
+    print(f"[INFO] Container environment: {IS_CONTAINER}")
+    print(f"[INFO] Routes registered: {[rule.rule for rule in app.url_map.iter_rules()]}")
+    try:
+        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    except Exception as e:
+        print(f"[ERROR] Flask server failed to start: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 print("Updated TABLE_COLUMNS list:", TABLE_COLUMNS)
 
