@@ -1,0 +1,49 @@
+name: Trigger auto deployment for rema-pdf
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/rema-pdf-AutoDeployTrigger-c83ea5fd-93a0-41c4-94f1-0a109b8b122f.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.REMAPDF_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.REMAPDF_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.REMAPDF_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          _targetLabelKey_: _targetLabel_
+          registryUrl: remapdf.azurecr.io
+          registryUsername: ${{ secrets.REMAPDF_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.REMAPDF_REGISTRY_PASSWORD }}
+          containerAppName: rema-pdf
+          resourceGroup: remavenv
+          imageToBuild: remapdf.azurecr.io/rema-pdf:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
